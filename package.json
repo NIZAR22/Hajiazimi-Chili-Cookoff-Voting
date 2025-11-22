@@ -1,0 +1,27 @@
+{
+  "name": "hajiazimi-chili-cookoff-voting",
+  "version": "1.0.0",
+  "description": "Chili Cook-Off Voting System with Vue.js frontend and Express backend",
+  "scripts": {
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\"",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && nodemon server.js",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ..",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "start": "npm run dev"
+  },
+  "keywords": [
+    "chili",
+    "cookoff",
+    "voting",
+    "vue",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  }
+}
