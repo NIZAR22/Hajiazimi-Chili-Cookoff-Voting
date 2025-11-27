@@ -15,7 +15,6 @@
       <v-card-text>
         <!-- Show completion message when voted on all chilis -->
         <v-alert v-if="hasVotedOnAllChilis" type="success" class="mb-4">
-          <!-- <v-icon start>mdi-check-circle</v-icon> -->
           <strong>Thank you for voting!</strong> You have completed scoring all chilis.
         </v-alert>
 
