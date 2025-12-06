@@ -4,6 +4,13 @@ import { chiliApi } from "@/services/api";
 export default {
   data() {
     return {
+      // Authentication
+      isAuthenticated: false,
+      password: "",
+      adminPassword: "yourNewPassword", // Change this to your desired password
+      showPasswordDialog: true,
+      passwordError: false,
+      
       numberOfChilis: 0,
       chiliEntries: [],
       showResetDialog: false,
@@ -93,15 +100,59 @@ export default {
   },
 
   async created() {
-    await this.loadSettings();
-    await this.loadBonusRoundStatus();
-    await this.loadScores();
-    this.startScoresPolling();
+    // Check if already authenticated in this session
+    if (sessionStorage.getItem('adminAuthenticated') === 'true') {
+      this.isAuthenticated = true;
+      this.showPasswordDialog = false;
+      await this.initializeAdmin();
+    }
   },
+
   beforeUnmount() {
     if (this.pollingIntervalId) clearInterval(this.pollingIntervalId);
   },
+
   methods: {
+    async initializeAdmin() {
+      await this.loadSettings();
+      await this.loadBonusRoundStatus();
+      await this.loadScores();
+      this.startScoresPolling();
+    },
+
+    async authenticateAdmin() {
+      if (this.password === this.adminPassword) {
+        this.isAuthenticated = true;
+        this.showPasswordDialog = false;
+        this.passwordError = false;
+        
+        // Remember authentication for this session
+        sessionStorage.setItem('adminAuthenticated', 'true');
+        
+        // Initialize admin functionality
+        await this.initializeAdmin();
+      } else {
+        this.passwordError = true;
+        this.password = "";
+      }
+    },
+
+    logout() {
+      this.isAuthenticated = false;
+      this.showPasswordDialog = true;
+      this.password = "";
+      this.passwordError = false;
+      
+      // Clear authentication
+      sessionStorage.removeItem('adminAuthenticated');
+      
+      // Stop polling
+      if (this.pollingIntervalId) {
+        clearInterval(this.pollingIntervalId);
+        this.pollingIntervalId = null;
+      }
+    },
+
     async loadScores() {
       try {
         // Always load final scores (they work even without bonus data)
@@ -278,9 +329,55 @@ export default {
 </style>
 
 <template>
-  <v-container>
+  <!-- Password Authentication Dialog -->
+  <v-dialog v-model="showPasswordDialog" persistent max-width="400">
+    <v-card>
+      <v-card-title class="text-h5 text-center">
+        <v-icon icon="mdi-lock" class="mr-2"></v-icon>
+        Admin Access Required
+      </v-card-title>
+      <v-card-text>
+        <v-form @submit.prevent="authenticateAdmin">
+          <v-text-field
+            v-model="password"
+            label="Admin Password"
+            type="password"
+            :error="passwordError"
+            :error-messages="passwordError ? 'Incorrect password' : ''"
+            @keyup.enter="authenticateAdmin"
+            autofocus
+          ></v-text-field>
+        </v-form>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn 
+          color="primary" 
+          @click="authenticateAdmin"
+          :disabled="!password"
+        >
+          Access Admin
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Admin Panel Content (only shown when authenticated) -->
+  <div v-if="isAuthenticated">
     <v-card class="mb-4">
-      <v-card-title class="text-h4">Admin Panel</v-card-title>
+      <v-card-title class="text-h4 d-flex align-center">
+        Admin Panel
+        <v-spacer></v-spacer>
+        <v-btn
+          color="grey"
+          variant="outlined"
+          size="small"
+          @click="logout"
+          prepend-icon="mdi-logout"
+        >
+          Logout
+        </v-btn>
+      </v-card-title>
 
       <!-- Competition Setup -->
       <v-card-text>
@@ -495,20 +592,21 @@ export default {
         </v-data-table>
       </v-card-text>
     </v-card>
-    <!-- Confirmation Dialog -->
-    <v-dialog v-model="showResetDialog" max-width="400">
-      <v-card>
-        <v-card-title class="text-h5">Reset Competition?</v-card-title>
-        <v-card-text>
-          This will clear all chili entries and scores. This action cannot be
-          undone.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="grey" @click="showResetDialog = false">Cancel</v-btn>
-          <v-btn color="error" @click="confirmReset">Reset All</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-container>
+  </div>
+
+  <!-- Confirmation Dialog -->
+  <v-dialog v-model="showResetDialog" max-width="400">
+    <v-card>
+      <v-card-title class="text-h5">Reset Competition?</v-card-title>
+      <v-card-text>
+        This will clear all chili entries and scores. This action cannot be
+        undone.
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="grey" @click="showResetDialog = false">Cancel</v-btn>
+        <v-btn color="error" @click="confirmReset">Reset All</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>

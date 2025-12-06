@@ -22,13 +22,28 @@ export default {
         class="mr-3"
       ></v-img>
       <v-spacer></v-spacer>
-      <v-btn to="/" text>Home</v-btn>
-      <v-btn to="/voting" text>Vote</v-btn>
-      <v-btn to="/admin" text>Admin</v-btn>
+      
+      <v-btn 
+        to="/vote" 
+        variant="text"
+        :class="{ 'v-btn--active': $route.name === 'vote' }"
+      >
+        <v-icon>mdi-vote</v-icon>
+        Vote
+      </v-btn>
+      
+      <v-btn 
+        to="/admin" 
+        variant="text"
+        :class="{ 'v-btn--active': $route.name === 'admin' }"
+      >
+        <v-icon>mdi-cog</v-icon>
+        Admin
+      </v-btn>
     </v-app-bar>
 
     <v-main>
-      <router-view></router-view>
+      <router-view />
     </v-main>
   </v-app>
 </template>

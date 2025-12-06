@@ -1,26 +1,25 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
-const routes = [
-  {
-    path: '/',
-    name: 'Home',
-    component: () => import('../views/HomeView.vue')
-  },
-  {
-    path: '/admin',
-    name: 'Admin',
-    component: () => import('../views/AdminView.vue')
-  },
-  {
-    path: '/voting',
-    name: 'Voting',
-    component: () => import('../views/VotingView.vue')
-  }
-]
+import VotingView from '../views/VotingView.vue'
+import AdminView from '../views/AdminView.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      redirect: '/vote'
+    },
+    {
+      path: '/vote',
+      name: 'vote',
+      component: VotingView
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminView
+    }
+  ]
 })
 
 export default router
