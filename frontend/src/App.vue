@@ -33,6 +33,15 @@ export default {
       </v-btn>
       
       <v-btn 
+        to="/add-chili" 
+        variant="text"
+        :class="{ 'v-btn--active': $route.name === 'add-chili' }"
+      >
+        <v-icon>mdi-plus</v-icon>
+        Add Chili
+      </v-btn>
+      
+      <v-btn 
         to="/admin" 
         variant="text"
         :class="{ 'v-btn--active': $route.name === 'admin' }"

@@ -20,7 +20,6 @@
 
         <!-- Show warning when current chili already scored -->
         <v-alert v-else-if="currentChiliAlreadyScored" type="info" class="mb-4">
-          <v-icon start>mdi-information</v-icon>
           You have already submitted scores for this chili. Scores are readonly.
         </v-alert>
 
@@ -336,6 +335,7 @@
               size="large"
               type="submit"
               :disabled="!isFormValid"
+              prepend-icon="mdi-send"
             >
               Submit my Chili Scores
             </v-btn>
@@ -406,7 +406,6 @@
         </v-alert>
         
         <v-alert v-else-if="bonusRoundActive && !hasSubmittedBonus" type="info" class="mb-4">
-          <v-icon start>mdi-information</v-icon>
           You have {{ remainingBonusPoints }} bonus points remaining to distribute.
         </v-alert>
 
