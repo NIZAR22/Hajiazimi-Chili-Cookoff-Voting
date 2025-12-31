@@ -46,18 +46,6 @@ export default {
           width: "120px",
         },
         {
-          title: "Avg Aroma",
-          key: "avg_aroma",
-          align: "center",
-          width: "120px",
-        },
-        {
-          title: "Avg Taste",
-          key: "avg_taste",
-          align: "center",
-          width: "120px",
-        },
-        {
           title: "Max",
           key: "max_total_score",
           align: "center",
@@ -242,6 +230,9 @@ export default {
       this.chiliEntries.splice(index, 1);
       this.numberOfChilis = this.chiliEntries.length;
 
+      // Clear localStorage entries for users who submitted this chili
+      this.clearChiliSubmissionStorage(number);
+
       // Always try to delete from database - let the API handle if it doesn't exist
       try {
         await chiliApi.deleteByNumber(number);
@@ -312,10 +303,47 @@ export default {
             localStorage.removeItem(key);
           }
         });
+        // Clear all chili submission localStorage
+        this.clearAllChiliSubmissionStorage();
         console.log("Competition reset and voting history cleared");
         await this.loadScores(); // Refresh scores table
       } catch (error) {
         console.error("Error resetting competition:", error);
+      }
+    },
+
+    // Clear localStorage entries for users who submitted a specific chili
+    clearChiliSubmissionStorage(chiliNumber) {
+      try {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith("chili_submitted_")) {
+            try {
+              const submittedData = JSON.parse(localStorage.getItem(key));
+              if (submittedData && submittedData.number === chiliNumber) {
+                localStorage.removeItem(key);
+                console.log(`Cleared chili submission storage for chili #${chiliNumber}: ${key}`);
+              }
+            } catch (parseError) {
+              console.error(`Error parsing localStorage key ${key}:`, parseError);
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Error clearing chili submission storage:", error);
+      }
+    },
+
+    // Clear all chili submission localStorage entries
+    clearAllChiliSubmissionStorage() {
+      try {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith("chili_submitted_")) {
+            localStorage.removeItem(key);
+          }
+        });
+        console.log("Cleared all chili submission storage");
+      } catch (error) {
+        console.error("Error clearing all chili submission storage:", error);
       }
     },
   },
@@ -529,16 +557,6 @@ export default {
             >
               {{ formatNumber(item.avg_total_score) }}
             </v-chip>
-          </template>
-
-          <!-- Format average aroma to 2 decimals -->
-          <template v-slot:item.avg_aroma="{ item }">
-            {{ formatNumber(item.avg_aroma) }}
-          </template>
-
-          <!-- Format average taste to 2 decimals -->
-          <template v-slot:item.avg_taste="{ item }">
-            {{ formatNumber(item.avg_taste) }}
           </template>
 
           <!-- Show max score or dash if no scores -->

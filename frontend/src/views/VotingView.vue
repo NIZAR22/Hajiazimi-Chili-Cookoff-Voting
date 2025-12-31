@@ -409,8 +409,14 @@
           You have {{ remainingBonusPoints }} bonus points remaining to distribute.
         </v-alert>
 
+        <!-- No tied chilis message -->
+        <v-alert v-if="bonusChilis.length === 0 && bonusRoundActive" type="info" class="mb-4">
+          <strong>No tied chilis found.</strong>
+          <br>Bonus points are only available for chilis with identical scores to break ties.
+        </v-alert>
+
         <!-- Bonus Points Grid -->
-        <v-row>
+        <v-row v-if="bonusChilis.length > 0">
           <v-col 
             v-for="chili in bonusChilis" 
             :key="chili.number" 
@@ -418,12 +424,27 @@
             sm="6" 
             md="4"
           >
-            <v-card variant="outlined" class="pa-3">
-              <v-card-title class="text-h6">
+            <v-card 
+              variant="outlined" 
+              class="pa-3"
+              :class="{ 'border-warning': chili.isWinner }"
+            >
+              <v-card-title class="text-h6 d-flex align-center">
                 Chili #{{ chili.number }}
+                <v-chip 
+                  v-if="chili.isWinner"
+                  color="warning" 
+                  size="small" 
+                  class="ml-2"
+                >
+                  Tied
+                </v-chip>
               </v-card-title>
               <v-card-subtitle v-if="chili.name">
                 {{ chili.name }}
+              </v-card-subtitle>
+              <v-card-subtitle v-if="chili.currentScore > 0" class="text-caption">
+                Current Score: {{ chili.currentScore.toFixed(2) }}
               </v-card-subtitle>
               
               <v-slider
@@ -467,7 +488,7 @@
             v-if="!hasSubmittedBonus"
             color="warning"
             size="large"
-            :disabled="!canSubmitBonus || totalBonusPoints === 0"
+            :disabled="!canSubmitBonus || totalBonusPoints === 0 || bonusChilis.length === 0"
             @click="submitBonusScores"
           >
             <v-icon start>mdi-star</v-icon>
@@ -485,6 +506,85 @@
         </v-card-actions>
       </v-card-text>
     </v-card>
+
+    <!-- Add Chili Modal -->
+    <v-dialog v-model="showAddChiliModal" persistent max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5 d-flex align-center">
+          <v-icon icon="mdi-chili-hot" color="primary" class="mr-2"></v-icon>
+          Submit Your Chili
+        </v-card-title>
+        <v-card-subtitle>
+          Enter your chili into the competition
+        </v-card-subtitle>
+        
+        <v-card-text>
+          <v-alert type="info" variant="outlined" class="mb-4">
+            <div class="text-body-2">
+              <strong>Tips for your chili name:</strong>
+              <ul class="mt-2 ml-4">
+                <li>Don't include your name in the chili name</li>
+                <li>Be creative and unique!</li>
+                <li>Keep it family-friendly</li>
+              </ul>
+            </div>
+          </v-alert>
+          
+          <v-form @submit.prevent="submitChili" ref="addChiliForm">
+            <v-text-field
+              v-model="chiliData.name"
+              label="Chili Name *"
+              :placeholder="`e.g., ${randomChiliName}`"
+              :rules="addChiliNameRules"
+              :counter="50"
+              required
+              variant="outlined"
+              class="mb-4"
+            ></v-text-field>
+
+            <v-text-field
+              v-model="chiliData.cook"
+              label="Your Name *"
+              placeholder="Enter your name"
+              :rules="addChiliCookRules"
+              :counter="30"
+              required
+              variant="outlined"
+              class="mb-4"
+            ></v-text-field>
+
+            <div class="text-center text-body-2 text-medium-emphasis">
+              <v-icon icon="mdi-information" color="info" class="mr-1" size="small"></v-icon>
+              Each person can only submit one chili to the contest
+            </div>
+          </v-form>
+        </v-card-text>
+        
+        <v-card-actions class="pa-4 d-flex flex-column flex-sm-row gap-2">
+          <v-btn
+            color="grey"
+            variant="outlined"
+            @click="closeAddChiliModal"
+            :block="$vuetify.display.xs"
+            class="flex-grow-1 flex-sm-grow-0"
+          >
+            Skip for Now
+          </v-btn>
+          <v-spacer class="d-none d-sm-block"></v-spacer>
+          <v-btn
+            color="primary"
+            :loading="submittingChili"
+            :disabled="!isAddChiliFormValid || submittingChili"
+            @click="submitChili"
+            prepend-icon="mdi-send"
+            :block="$vuetify.display.xs"
+            class="flex-grow-1 flex-sm-grow-0"
+          >
+            Submit My Chili
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -519,7 +619,30 @@ export default {
      totalBonusPoints: 0,
      maxBonusPoints: 10,
      judgeId: null,
-     hasSubmittedBonus: false
+     hasSubmittedBonus: false,
+     scoresTable: [], // For tracking scores to determine ties
+     
+     // Add chili modal
+     showAddChiliModal: false,
+     chiliData: {
+       name: '',
+       cook: ''
+     },
+     submittingChili: false,
+     contestantId: null,
+     hasSubmittedChili: false,
+     submittedChiliData: {},
+     randomChiliName: '',
+     addChiliNameRules: [
+       v => !!v || 'Chili name is required',
+       v => (v && v.length >= 3) || 'Chili name must be at least 3 characters',
+       v => (v && v.length <= 50) || 'Chili name must be less than 50 characters'
+     ],
+     addChiliCookRules: [
+       v => !!v || 'Your name is required',
+       v => (v && v.length >= 2) || 'Name must be at least 2 characters',
+       v => (v && v.length <= 30) || 'Name must be less than 30 characters'
+     ]
     }
   },
 
@@ -535,11 +658,51 @@ export default {
 
     // For bonus round - all chilis available for bonus points
     bonusChilis() {
-      return this.chiliEntries.map(chili => ({
-        ...chili,
-        name: chili.name || `Chili #${chili.number}`,
-        bonusPoints: this.bonusScores[chili.number] || 0
-      }))
+      if (!this.bonusRoundActive) return []
+      
+      // Get current scores from the scores table or admin data
+      const chiliScores = new Map()
+      
+      // Use scores from admin view if available
+      if (this.scoresTable && this.scoresTable.length > 0) {
+        this.scoresTable.forEach(chili => {
+          if (chili.avg_total_score && chili.avg_total_score > 0) {
+            chiliScores.set(chili.number, parseFloat(chili.avg_total_score))
+          }
+        })
+      }
+      
+      // If no scores available, return empty array
+      if (chiliScores.size === 0) return []
+      
+      // Group chilis by their scores
+      const scoreGroups = new Map()
+      chiliScores.forEach((score, chiliNumber) => {
+        const roundedScore = Math.round(score * 100) / 100 // Round to 2 decimal places
+        if (!scoreGroups.has(roundedScore)) {
+          scoreGroups.set(roundedScore, [])
+        }
+        scoreGroups.get(roundedScore).push(chiliNumber)
+      })
+      
+      // Find tied chilis (groups with more than 1 chili)
+      const tiedChiliNumbers = new Set()
+      scoreGroups.forEach((chilis, score) => {
+        if (chilis.length > 1) {
+          chilis.forEach(chiliNumber => tiedChiliNumbers.add(chiliNumber))
+        }
+      })
+      
+      // Return only chilis that are tied, with isWinner flag
+      return this.chiliEntries
+        .filter(chili => tiedChiliNumbers.has(chili.number))
+        .map(chili => ({
+          ...chili,
+          name: chili.name || `Chili #${chili.number}`,
+          bonusPoints: this.bonusScores[chili.number] || 0,
+          isWinner: true, // All tied chilis are potential winners
+          currentScore: chiliScores.get(chili.number) || 0
+        }))
     },
 
     // Check if user has scored all available chilis
@@ -604,6 +767,14 @@ export default {
     // Check if bonus submission is valid
     canSubmitBonus() {
       return this.totalBonusPoints <= this.maxBonusPoints && !this.hasSubmittedBonus
+    },
+
+    // Check if add chili form is valid
+    isAddChiliFormValid() {
+      return this.chiliData.name && 
+             this.chiliData.cook && 
+             this.chiliData.name.length >= 3 && 
+             this.chiliData.cook.length >= 2
     }
   },
 
@@ -647,6 +818,18 @@ export default {
     // Generate judge ID and load bonus round status
     this.judgeId = this.generateJudgeId()
     await this.loadBonusRoundStatus()
+    
+    // Check chili submission status and show modal if needed
+    this.contestantId = this.generateContestantId()
+    await this.checkChiliSubmissionStatus()
+    
+    // Generate random chili name suggestion
+    this.generateRandomChiliName()
+    
+    // Show add chili modal on first visit if no chili submitted
+    if (!this.hasSubmittedChili) {
+      this.showAddChiliModal = true
+    }
   },
 
   methods: {
@@ -771,6 +954,11 @@ export default {
        const { data } = await chiliApi.getBonusRoundStatus()
        this.bonusRoundActive = data.bonus_round_active
        
+       // If bonus round is active, load scores for tie detection
+       if (this.bonusRoundActive) {
+         await this.loadScoresForTieDetection()
+       }
+       
        // Check if already submitted bonus scores
        const submittedKey = `bonus_submitted_${this.judgeId}`
        this.hasSubmittedBonus = localStorage.getItem(submittedKey) === 'true'
@@ -782,6 +970,25 @@ export default {
       })
      } catch (error) {
        console.error('Error loading bonus round status:', error)
+     }
+   },
+
+   // Load scores for tie detection
+   async loadScoresForTieDetection() {
+     try {
+       // Try final scores first, fallback to regular scores
+       try {
+         const { data } = await chiliApi.getFinalScores()
+         this.scoresTable = Array.isArray(data) ? data : []
+       } catch (finalScoresError) {
+         const { data } = await chiliApi.getAllScores()
+         this.scoresTable = Array.isArray(data) ? data : []
+       }
+       
+       console.log('Scores loaded for tie detection:', this.scoresTable)
+     } catch (error) {
+       console.error('Error loading scores for tie detection:', error)
+       this.scoresTable = []
      }
    },
 
@@ -916,6 +1123,144 @@ export default {
     getPreviousSection() {
      const sections = ['Aroma', 'Appearance', 'Taste', 'Heat Level', 'Creativity']
      return sections[this.currentIndex - 1] || ''
+    },
+
+    // Generate unique contestant ID for chili submission
+    generateContestantId() {
+      const stored = localStorage.getItem('contestantId')
+      if (stored) return stored
+      
+      const id = 'contestant_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+      localStorage.setItem('contestantId', id)
+      return id
+    },
+
+    // Check if user has already submitted a chili
+    async checkChiliSubmissionStatus() {
+      try {
+        const submittedData = localStorage.getItem(`chili_submitted_${this.contestantId}`)
+        if (submittedData) {
+          this.submittedChiliData = JSON.parse(submittedData)
+          this.hasSubmittedChili = true
+        }
+      } catch (error) {
+        console.error('Error checking chili submission status:', error)
+      }
+    },
+
+    // Submit chili to the contest
+    async submitChili() {
+      if (!this.isAddChiliFormValid || this.submittingChili) return
+
+      // Validate form
+      const { valid } = await this.$refs.addChiliForm.validate()
+      if (!valid) return
+
+      this.submittingChili = true
+
+      try {
+        // Get the next chili number
+        const nextNumber = await this.getNextChiliNumber()
+
+        // Prepare chili data
+        const chiliPayload = {
+          number: nextNumber,
+          name: this.chiliData.name.trim(),
+          cook: this.chiliData.cook.trim(),
+          contestant_id: this.contestantId
+        }
+
+        // Submit to database
+        await chiliApi.create(chiliPayload)
+
+        // Save to localStorage to prevent duplicate submissions
+        const submittedData = {
+          number: nextNumber,
+          name: chiliPayload.name,
+          cook: chiliPayload.cook,
+          submittedAt: new Date().toISOString()
+        }
+        localStorage.setItem(`chili_submitted_${this.contestantId}`, JSON.stringify(submittedData))
+
+        // Update UI state
+        this.hasSubmittedChili = true
+        this.submittedChiliData = submittedData
+        this.showAddChiliModal = false
+
+        // Reload chilis to include the new one
+        await this.loadChilis()
+
+        // Show success message
+        this.snackbar = {
+          show: true,
+          message: 'Your chili has been successfully submitted to the contest!',
+          color: 'success'
+        }
+
+        console.log('Chili submitted successfully:', chiliPayload)
+
+      } catch (error) {
+        console.error('Error submitting chili:', error)
+        
+        // Show error message
+        this.snackbar = {
+          show: true,
+          message: 'Failed to submit chili. Please try again.',
+          color: 'error'
+        }
+
+        // If it's a duplicate entry error, mark as submitted anyway
+        if (error.response?.status === 409 || error.message?.includes('duplicate')) {
+          this.hasSubmittedChili = true
+          this.showAddChiliModal = false
+          this.snackbar.message = 'You have already submitted a chili to this contest.'
+        }
+      } finally {
+        this.submittingChili = false
+      }
+    },
+
+    // Get the next available chili number
+    async getNextChiliNumber() {
+      try {
+        const { data } = await chiliApi.getAll()
+        const existingNumbers = data.map(chili => chili.number)
+        const maxNumber = Math.max(0, ...existingNumbers)
+        return maxNumber + 1
+      } catch (error) {
+        console.error('Error getting chili numbers:', error)
+        // Fallback: use timestamp-based number
+        return Math.floor(Date.now() / 1000)
+      }
+    },
+
+    // Close add chili modal
+    closeAddChiliModal() {
+      this.showAddChiliModal = false
+    },
+
+    // Generate a random chili name suggestion
+    generateRandomChiliName() {
+      const adjectives = [
+        'Fire', 'Blazing', 'Thunder', 'Lightning', 'Dragon', 'Phoenix', 'Midnight', 'Smoky',
+        'Volcanic', 'Inferno', 'Spicy', 'Wild', 'Savage', 'Burning', 'Flaming', 'Scorching',
+        'Molten', 'Searing', 'Crimson', 'Golden', 'Secret', 'Mystery', 'Ultimate', 'Supreme',
+        'Legendary', 'Epic', 'Atomic', 'Nuclear', 'Turbo', 'Super', 'Mega', 'Power', 'Killer',
+        'Death', 'Venom', 'Poison', 'Toxic', 'Deadly', 'Sweet', 'Honey', 'Maple', 'Brown Sugar'
+      ]
+      
+      const nouns = [
+        'Dragon', 'Thunder', 'Lightning', 'Venom', 'Heat', 'Burn', 'Blast', 'Storm', 'Fury',
+        'Rage', 'Power', 'Force', 'Magic', 'Spell', 'Potion', 'Elixir', 'Brew', 'Mix', 'Blend',
+        'Recipe', 'Special', 'Secret', 'Surprise', 'Twist', 'Kick', 'Punch', 'Explosion', 'Bomb',
+        'Volcano', 'Lava', 'Magma', 'Fire', 'Flame', 'Ember', 'Spark', 'Glow', 'Shine', 'Burst',
+        'Rush', 'Wave', 'Tide', 'Flood', 'River', 'Stream', 'Flow', 'Current', 'Wind', 'Breeze'
+      ]
+      
+      const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)]
+      const randomNoun = nouns[Math.floor(Math.random() * nouns.length)]
+      
+      this.randomChiliName = `${randomAdjective} ${randomNoun}`
     }
   }
 }
