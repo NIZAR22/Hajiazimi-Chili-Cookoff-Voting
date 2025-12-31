@@ -1229,8 +1229,8 @@ export default {
         return maxNumber + 1
       } catch (error) {
         console.error('Error getting chili numbers:', error)
-        // Fallback: use timestamp-based number
-        return Math.floor(Date.now() / 1000)
+        // Fallback: use a safe default number
+        return 1
       }
     },
 
