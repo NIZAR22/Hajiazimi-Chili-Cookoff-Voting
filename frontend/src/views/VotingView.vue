@@ -642,7 +642,10 @@ export default {
        v => !!v || 'Your name is required',
        v => (v && v.length >= 2) || 'Name must be at least 2 characters',
        v => (v && v.length <= 30) || 'Name must be less than 30 characters'
-     ]
+     ],
+     
+     // Polling for bonus round status changes
+     pollingIntervalId: null
     }
   },
 
@@ -830,6 +833,17 @@ export default {
     if (!this.hasSubmittedChili) {
       this.showAddChiliModal = true
     }
+    
+    // Start polling for bonus round status changes
+    this.startBonusRoundPolling()
+  },
+
+  beforeUnmount() {
+    // Clean up polling interval when component is destroyed
+    if (this.pollingIntervalId) {
+      clearInterval(this.pollingIntervalId)
+      this.pollingIntervalId = null
+    }
   },
 
   methods: {
@@ -949,10 +963,28 @@ export default {
    },
 
    // Load bonus round status
-   async loadBonusRoundStatus() {
+   async loadBonusRoundStatus(showNotification = false) {
      try {
        const { data } = await chiliApi.getBonusRoundStatus()
+       const previousStatus = this.bonusRoundActive
        this.bonusRoundActive = data.bonus_round_active
+       
+       // Show notification when bonus round status changes
+       if (showNotification && previousStatus !== this.bonusRoundActive) {
+         if (this.bonusRoundActive) {
+           this.snackbar = {
+             show: true,
+             message: '🔥 Bonus Round has started! Vote for your top chilis to give them extra points.',
+             color: 'warning'
+           }
+         } else if (previousStatus) {
+           this.snackbar = {
+             show: true,
+             message: '✅ Bonus Round has ended! Final results are now available.',
+             color: 'success'
+           }
+         }
+       }
        
        // If bonus round is active, load scores for tie detection
        if (this.bonusRoundActive) {
@@ -990,6 +1022,24 @@ export default {
        console.error('Error loading scores for tie detection:', error)
        this.scoresTable = []
      }
+   },
+
+   // Start polling for bonus round status changes
+   startBonusRoundPolling(interval = 5000) {
+     if (this.pollingIntervalId) {
+       clearInterval(this.pollingIntervalId)
+     }
+     
+     this.pollingIntervalId = setInterval(async () => {
+       try {
+         console.log('🔄 Polling bonus round status...', new Date().toLocaleTimeString())
+         await this.loadBonusRoundStatus(true) // Show notifications on status change
+       } catch (error) {
+         console.error('Error polling bonus round status:', error)
+       }
+     }, interval)
+     
+     console.log('🚀 Started bonus round polling (every 5 seconds)')
    },
 
     // Update bonus points for a chili
