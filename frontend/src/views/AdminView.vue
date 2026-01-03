@@ -7,7 +7,7 @@ export default {
       // Authentication
       isAuthenticated: false,
       password: "",
-      adminPassword: "yourNewPassword", // Change this to your desired password
+      adminPassword: "goop2026", // Change this to your desired password
       showPasswordDialog: true,
       passwordError: false,
       
@@ -139,6 +139,11 @@ export default {
         clearInterval(this.pollingIntervalId);
         this.pollingIntervalId = null;
       }
+    },
+
+    cancelAuth() {
+      // Navigate back to the main voting view
+      this.$router.push('/');
     },
 
     async loadScores() {
@@ -358,7 +363,7 @@ export default {
 
 <template>
   <!-- Password Authentication Dialog -->
-  <v-dialog v-model="showPasswordDialog" persistent max-width="400">
+  <v-dialog v-model="showPasswordDialog" max-width="400">
     <v-card>
       <v-card-title class="text-h5 text-center">
         <v-icon icon="mdi-lock" class="mr-2"></v-icon>
@@ -378,6 +383,13 @@ export default {
         </v-form>
       </v-card-text>
       <v-card-actions>
+        <v-btn 
+          color="grey" 
+          variant="outlined"
+          @click="cancelAuth"
+        >
+          Cancel
+        </v-btn>
         <v-spacer></v-spacer>
         <v-btn 
           color="primary" 

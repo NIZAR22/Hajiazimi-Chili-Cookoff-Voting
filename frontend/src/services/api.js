@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+// Use window.location.origin for production (dynamic), localhost for development
+const baseURL = process.env.NODE_ENV === 'production' 
+  ? window.location.origin 
+  : 'http://localhost:3001'
+
 const api = axios.create({
-  baseURL: 'http://localhost:3001', // server base
+  baseURL: baseURL,
   headers: { 'Content-Type': 'application/json' }
 })
 

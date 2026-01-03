@@ -112,7 +112,7 @@ npm run dev
 
 This will start:
 - **Frontend**: http://localhost:5173 (Vite dev server)
-- **Backend**: http://localhost:3000 (Node.js API server)
+- **Backend**: http://localhost:3005 (Node.js API server)
 
 ### Manual Startup
 If you prefer to run them separately:
@@ -156,7 +156,7 @@ adminPassword: "yourNewPassword", // Change this
 ```
 
 ### API Endpoints
-The frontend connects to the backend API at `http://localhost:3000` by default.
+The frontend connects to the backend API at `http://localhost:3005` by default.
 Update `frontend/src/services/api.js` if needed.
 
 ## Features in Detail

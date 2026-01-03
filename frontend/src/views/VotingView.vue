@@ -1,6 +1,7 @@
 <template>
-  <v-container>
-    <!-- Main Scoring Sheet Card - hide when bonus round is active -->
+  <div class="voting-page-background">
+    <v-container>
+      <!-- Main Scoring Sheet Card - hide when bonus round is active -->
     <v-card v-if="!bonusRoundActive" class="mb-4">
       <v-card-title class="text-h4 text-sm-h3 text-break text-wrap pa-4">
         <div class="d-flex align-center">
@@ -586,6 +587,7 @@
       </v-card>
     </v-dialog>
   </v-container>
+  </div>
 </template>
 
 <script>
@@ -1317,6 +1319,21 @@ export default {
 </script>
 
 <style scoped>
+.voting-page-background {
+  min-height: 100vh;
+  background-image: url('@/assets/images/chili-logo-transparent-banner2.png');
+  background-repeat: no-repeat;
+  background-position: center 115%;
+  background-size: contain;
+  background-attachment: fixed;
+  position: relative;
+}
+
+.voting-page-background > .v-container {
+  position: relative;
+  z-index: 1;
+}
+
 .v-snackbar {
   top: 20px !important;
   right: 20px !important;
